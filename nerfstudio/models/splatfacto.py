@@ -185,6 +185,13 @@ class SplatfactoModelConfig(ModelConfig):
     camera_optimizer: CameraOptimizerConfig = field(default_factory=lambda: CameraOptimizerConfig(mode="off"))
     """Config of the camera optimizer to use"""
 
+    """Config of the dilation"""
+    scaleup_point_post_densification: bool = False
+    scaleup_factor: float = 0.9
+    scaleup_by_scale: bool = True
+    scaleup_bias: float = 0.2
+    scaleup_interval: float = 1000
+
 
 class SplatfactoModel(Model):
     """Nerfstudio's implementation of Gaussian Splatting
@@ -314,6 +321,24 @@ class SplatfactoModel(Model):
     @property
     def opacities(self):
         return self.gauss_params["opacities"]
+    
+    def scaleup_points(self, scaleup_factor=0.1, byscale=True):
+        if byscale:
+            ratio_by_scale = self.compute_ratio_by_sacling(bias=self.config.scaleup_bias)
+            scale_factor = scaleup_factor * ratio_by_scale + 1
+        else:
+            scale_factor = torch.tensor(scaleup_factor + 1)
+
+        # y = log(a * b) = log a + log b 
+        # self.gauss_params["scales"].data = torch.log(torch.exp(self.gauss_params["scales"].data) * scale_factor)
+        self.gauss_params["scales"].data = self.gauss_params["scales"].data + torch.log(scale_factor)
+
+    def compute_ratio_by_sacling(self, bias):
+        mean_scale = torch.mean(self.scales, dim=0, keepdim=True)
+        var_scale = torch.var(self.scales, dim=0, keepdim=True)
+        max_value = mean_scale + 3 * var_scale
+        ratio_by_scale = torch.relu(1 - self.scales / max_value) * (1 - bias) + bias    # range [0.2, 1]
+        return ratio_by_scale
 
     def load_state_dict(self, dict, **kwargs):  # type: ignore
         # resize the parameters to match the new number of points
@@ -505,6 +530,12 @@ class SplatfactoModel(Model):
             else:
                 # if we donot allow culling post refinement, no more gaussians will be pruned.
                 deleted_mask = None
+
+            # scale up points to alleviate aliasing problem
+            if self.step >= self.config.stop_split_at and self.step % self.config.scaleup_interval == 0 and self.config.scaleup_point_post_densification:
+            # if self.step >= 0 and self.config.scaleup_point_post_densification and self.step % self.config.scaleup_interval == 0:
+                self.scaleup_points(scaleup_factor=self.config.scaleup_factor, byscale=self.config.scaleup_by_scale)
+                # print("dilation step forward...")
 
             if deleted_mask is not None:
                 self.remove_from_all_optim(optimizers, deleted_mask)
