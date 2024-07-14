@@ -1,11 +1,10 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 data_dir=/home/luzhan/Datasets/nerf_360_v2
 old_exp_dir=/home/space/exps/ns_dila_exps/base_15k
 exp_dir=/home/space/exps/ns_dila_exps/dila
 
-# scenes=("bicycle" "bonsai" "counter" "flowers" "garden" "stump" "treehill" "kitchen" "room")
-scenes=("bicycle" "bonsai" "counter" "flowers" "garden")
+scenes=("stump" "treehill" "kitchen" "room")
 dilation_factors=(0.01 0.02 0.03 0.05 0.08)
 downscale_factors=(1 2 4 8)
 

@@ -1,17 +1,17 @@
 {
-  "experiment_name": "unnamed",
+  "experiment_name": "bicycle",
   "method_name": "splatfacto",
-  "checkpoint": "outputs/mip_dilation/dila_0.9/unnamed/splatfacto/2024-07-12_220635/nerfstudio_models/step-000029999.ckpt",
+  "checkpoint": "outputs/mip_dilation/dila_0.01/bicycle/splatfacto/0/nerfstudio_models/step-000030000.ckpt",
   "results": {
-    "psnr": 20.983938217163086,
-    "psnr_std": 3.3095407485961914,
-    "ssim": 0.5683897733688354,
-    "ssim_std": 0.10189804434776306,
-    "lpips": 0.46762150526046753,
-    "lpips_std": 0.10622577369213104,
-    "num_rays_per_sec": 79158976.0,
-    "num_rays_per_sec_std": 16978376.0,
-    "fps": 311.6519775390625,
-    "fps_std": 66.84452056884766
+    "psnr": 21.23053741455078,
+    "psnr_std": 1.5650588274002075,
+    "ssim": 0.5748090744018555,
+    "ssim_std": 0.055057231336832047,
+    "lpips": 0.4737400412559509,
+    "lpips_std": 0.032413139939308167,
+    "num_rays_per_sec": 101027040.0,
+    "num_rays_per_sec_std": 19373160.0,
+    "fps": 6.216070175170898,
+    "fps_std": 1.1920069456100464
   }
 }

@@ -323,8 +323,10 @@ class SplatfactoModel(Model):
         return self.gauss_params["opacities"]
     
     def scaleup_points(self, scaleup_factor=0.1, byscale=True):
+        current_scale = torch.exp(self.gauss_params["scales"].data)
+
         if byscale:
-            ratio_by_scale = self.compute_ratio_by_sacling(bias=self.config.scaleup_bias)
+            ratio_by_scale = self.compute_ratio_by_sacling(scale=current_scale, bias=self.config.scaleup_bias)
             scale_factor = scaleup_factor * ratio_by_scale + 1
         else:
             scale_factor = torch.tensor(scaleup_factor + 1)
@@ -333,11 +335,11 @@ class SplatfactoModel(Model):
         # self.gauss_params["scales"].data = torch.log(torch.exp(self.gauss_params["scales"].data) * scale_factor)
         self.gauss_params["scales"].data = self.gauss_params["scales"].data + torch.log(scale_factor)
 
-    def compute_ratio_by_sacling(self, bias):
-        mean_scale = torch.mean(self.scales, dim=0, keepdim=True)
-        var_scale = torch.var(self.scales, dim=0, keepdim=True)
+    def compute_ratio_by_sacling(self, scale, bias):
+        mean_scale = torch.mean(scale, dim=0, keepdim=True)
+        var_scale = torch.var(scale, dim=0, keepdim=True)
         max_value = mean_scale + 3 * var_scale
-        ratio_by_scale = torch.relu(1 - self.scales / max_value) * (1 - bias) + bias    # range [0.2, 1]
+        ratio_by_scale = torch.relu(1 - scale / max_value) * (1 - bias) + bias    # range [0.2, 1]
         return ratio_by_scale
 
     def load_state_dict(self, dict, **kwargs):  # type: ignore
@@ -532,10 +534,10 @@ class SplatfactoModel(Model):
                 deleted_mask = None
 
             # scale up points to alleviate aliasing problem
-            if self.step >= self.config.stop_split_at and self.step % self.config.scaleup_interval == 0 and self.config.scaleup_point_post_densification:
+            if self.step > self.config.stop_split_at and self.step % self.config.scaleup_interval == 0 and self.config.scaleup_point_post_densification:
             # if self.step >= 0 and self.config.scaleup_point_post_densification and self.step % self.config.scaleup_interval == 0:
                 self.scaleup_points(scaleup_factor=self.config.scaleup_factor, byscale=self.config.scaleup_by_scale)
-                # print("dilation step forward...")
+                print(f"dilation step forward in iter {self.step}")
 
             if deleted_mask is not None:
                 self.remove_from_all_optim(optimizers, deleted_mask)
@@ -954,7 +956,11 @@ class SplatfactoModel(Model):
         gt_rgb = self.composite_with_background(self.get_gt_img(batch["image"]), outputs["background"])
         predicted_rgb = outputs["rgb"]
 
-        combined_rgb = torch.cat([gt_rgb, predicted_rgb], dim=1)
+        try:
+            combined_rgb = torch.cat([gt_rgb, predicted_rgb], dim=1)
+        except:
+            print("gt_rgb shape: ", gt_rgb.shape)
+            print("predicted_rgb shape: ", predicted_rgb.shape)
 
         # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
         gt_rgb = torch.moveaxis(gt_rgb, -1, 0)[None, ...]
