@@ -478,6 +478,7 @@ class ColmapDataParser(DataParser):
         with status(msg="[bold yellow]Downscaling images...", spinner="growVertical"):
             assert downscale_factor > 1
             assert isinstance(downscale_factor, int)
+            # downscale_factor = int(downscale_factor)
             # Using %05d ffmpeg commands appears to be unreliable (skips images).
             for path in paths:
                 # Compute image-wise rescaled width/height.
@@ -526,7 +527,7 @@ class ColmapDataParser(DataParser):
                 self._downscale_factor = 2**df
                 CONSOLE.log(f"Using image downscale factor of {self._downscale_factor}")
             else:
-                self._downscale_factor = self.config.downscale_factor
+                self._downscale_factor = int(self.config.downscale_factor)
             if self._downscale_factor > 1 and not all(
                 get_fname(self.config.data / self.config.images_path, fp).parent.exists() for fp in image_filenames
             ):

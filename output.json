@@ -1,0 +1,17 @@
+{
+  "experiment_name": "unnamed",
+  "method_name": "splatfacto",
+  "checkpoint": "outputs/mip_dilation/dila_0.9/unnamed/splatfacto/2024-07-12_220635/nerfstudio_models/step-000029999.ckpt",
+  "results": {
+    "psnr": 20.983938217163086,
+    "psnr_std": 3.3095407485961914,
+    "ssim": 0.5683897733688354,
+    "ssim_std": 0.10189804434776306,
+    "lpips": 0.46762150526046753,
+    "lpips_std": 0.10622577369213104,
+    "num_rays_per_sec": 79158976.0,
+    "num_rays_per_sec_std": 16978376.0,
+    "fps": 311.6519775390625,
+    "fps_std": 66.84452056884766
+  }
+}
