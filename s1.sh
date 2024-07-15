@@ -5,7 +5,7 @@ old_exp_dir=/home/space/exps/ns_dila_exps/base_15k
 exp_dir=/home/space/exps/ns_dila_exps/dila
 
 scenes=("stump" "treehill" "kitchen" "room")
-dilation_factors=(0.01 0.02 0.03 0.05 0.08)
+dilation_factors=(0)
 downscale_factors=(1 2 4 8)
 
 for dilation_factor in ${dilation_factors[@]}; do
