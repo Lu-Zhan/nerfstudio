@@ -46,7 +46,7 @@ def process_folder(pred_dir, gt_dir, factor):
     return metric_values.mean(dim=0)
 
 
-base_dir = '/home/space/exps/ns_dila_exps/dila'
+base_dir = '/home/space/exps/ns_dila_exps/dila_fixop'
 dataset_dir = '/home/luzhan/Datasets/nerf_360_v2'
 factors = [1, 2, 4, 8]
 
@@ -75,15 +75,15 @@ for exp_dir in exp_dirs:
             gt_path = os.path.join(dataset_dir, scene)
 
             metric_files = glob.glob(os.path.join(exp_path, f'renders_{factor}', f'metric_*.json'))
-            if len(metric_files) >= 1 and False:
-                result = os.path.basename(metric_files[0])[:-5].split('_')[1]
+            if len(metric_files) >= 1:
+                result = os.path.basename(metric_files[0])[:-5].split('_')[1:]
                 result = torch.tensor([float(x) for x in result])
             else:
                 try:
                     result = process_folder(pred_dir=exp_path, gt_dir=gt_path, factor=factor)
-                    # save_path = os.path.join(exp_path, f'renders_{factor}', f'metric_{result[0]}_{result[1]}_{result[2]}.json')
-                    # with open(save_path, 'w+') as f:
-                    #     json.dump({}, f)
+                    save_path = os.path.join(exp_path, f'renders_{factor}', f'metric_{result[0]}_{result[1]}_{result[2]}.json')
+                    with open(save_path, 'w+') as f:
+                        json.dump({}, f)
                 except:
                     result = torch.tensor([-10, -10, -10])
             

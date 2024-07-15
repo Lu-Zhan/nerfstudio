@@ -2,10 +2,10 @@ export CUDA_VISIBLE_DEVICES=1
 
 data_dir=/home/luzhan/Datasets/nerf_360_v2
 old_exp_dir=/home/space/exps/ns_dila_exps/base_15k
-exp_dir=/home/space/exps/ns_dila_exps/dila
+exp_dir=/home/space/exps/ns_dila_exps/dila_fixop
 
 scenes=("stump" "treehill" "kitchen" "room")
-dilation_factors=(0)
+dilation_factors=(0.02)
 downscale_factors=(1 2 4 8)
 
 for dilation_factor in ${dilation_factors[@]}; do
@@ -40,7 +40,7 @@ for dilation_factor in ${dilation_factors[@]}; do
             ns-render dataset \
                 --load-config ${exp_dir}/dila_${dilation_factor}/${scene}/splatfacto/0/config.yml \
                 --downscale-factor ${downscale_factor} \
-                --rendered-output-names gt-rgb rgb \
+                --rendered-output-names rgb \
                 --output-path ${exp_dir}/dila_${dilation_factor}/${scene}/splatfacto/0/renders_${downscale_factor}
         done
         

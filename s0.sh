@@ -2,11 +2,11 @@ export CUDA_VISIBLE_DEVICES=0
 
 data_dir=/home/luzhan/Datasets/nerf_360_v2
 old_exp_dir=/home/space/exps/ns_dila_exps/base_15k
-exp_dir=/home/space/exps/ns_dila_exps/dila
+exp_dir=/home/space/exps/ns_dila_exps/dila_fixop
 
 # scenes=("bicycle" "bonsai" "counter" "flowers" "garden" "stump" "treehill" "kitchen" "room")
 scenes=("bicycle" "bonsai" "counter" "flowers" "garden")
-dilation_factors=(0)
+dilation_factors=(0.02 0.04)
 downscale_factors=(1 2 4 8)
 
 for dilation_factor in ${dilation_factors[@]}; do
@@ -17,6 +17,8 @@ for dilation_factor in ${dilation_factors[@]}; do
             --pipeline.model.scaleup-by-scale True \
             --pipeline.model.scaleup-bias 0.2 \
             --pipeline.model.scaleup-interval 1000 \
+            --pipeline.model.scaleup_th_mode top97 \
+            --pipeline.model.scaleup_annealing False \
             --pipeline.model.continue_cull_post_densification False \
             --pipeline.model.rasterize-mode antialiased \
             --pipeline.model.cull_alpha_thresh 0.005 \
@@ -41,7 +43,7 @@ for dilation_factor in ${dilation_factors[@]}; do
             ns-render dataset \
                 --load-config ${exp_dir}/dila_${dilation_factor}/${scene}/splatfacto/0/config.yml \
                 --downscale-factor ${downscale_factor} \
-                --rendered-output-names gt-rgb rgb \
+                --rendered-output-names rgb \
                 --output-path ${exp_dir}/dila_${dilation_factor}/${scene}/splatfacto/0/renders_${downscale_factor}
         done
         

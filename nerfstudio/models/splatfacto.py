@@ -191,7 +191,8 @@ class SplatfactoModelConfig(ModelConfig):
     scaleup_by_scale: bool = True
     scaleup_bias: float = 0.2
     scaleup_interval: float = 1000
-
+    scaleup_th_mode: Literal["top97", "mean"] = "top97"
+    scaleup_annealing: bool = False
 
 class SplatfactoModel(Model):
     """Nerfstudio's implementation of Gaussian Splatting
@@ -322,11 +323,18 @@ class SplatfactoModel(Model):
     def opacities(self):
         return self.gauss_params["opacities"]
     
-    def scaleup_points(self, scaleup_factor=0.1, byscale=True):
+    def scaleup_points(self, scaleup_factor=0.1, byscale=True, annealing=False):
         current_scale = torch.exp(self.gauss_params["scales"].data)
 
+        if annealing:
+            scaleup_factor = scaleup_factor * (1 - (self.step - 15000) / 15000)
+
         if byscale:
-            ratio_by_scale = self.compute_ratio_by_sacling(scale=current_scale, bias=self.config.scaleup_bias)
+            ratio_by_scale = self.compute_ratio_by_sacling(
+                scale=current_scale, 
+                bias=self.config.scaleup_bias,
+                th_mode=self.config.scaleup_th_mode,
+            )
             scale_factor = scaleup_factor * ratio_by_scale + 1
         else:
             scale_factor = torch.tensor(scaleup_factor + 1)
@@ -335,11 +343,26 @@ class SplatfactoModel(Model):
         # self.gauss_params["scales"].data = torch.log(torch.exp(self.gauss_params["scales"].data) * scale_factor)
         self.gauss_params["scales"].data = self.gauss_params["scales"].data + torch.log(scale_factor)
 
-    def compute_ratio_by_sacling(self, scale, bias):
+        ratio_op = 1 / (scale_factor[:, 0] * scale_factor[:, 1] * scale_factor[:, 2])
+        self.gauss_params["opacities"].data = self.inverse_sigmoid(
+            torch.sigmoid(self.gauss_params["opacities"].data) * ratio_op[:, None]
+        )
+    
+    def inverse_sigmoid(self, x):
+        return torch.log(x / (1 - x))
+
+    def compute_ratio_by_sacling(self, scale, bias, th_mode='top97'):
         mean_scale = torch.mean(scale, dim=0, keepdim=True)
-        var_scale = torch.var(scale, dim=0, keepdim=True)
-        max_value = mean_scale + 3 * var_scale
-        ratio_by_scale = torch.relu(1 - scale / max_value) * (1 - bias) + bias    # range [0.2, 1]
+    
+        if th_mode == 'top97':
+            var_scale = torch.var(scale, dim=0, keepdim=True)
+            th_value = mean_scale + 3 * var_scale
+        elif th_mode == 'mean':
+            th_value = mean_scale
+        else:
+            raise ValueError(f"Unknown threshold mode {th_mode}")
+
+        ratio_by_scale = torch.relu(1 - scale / th_value) * (1 - bias) + bias    # range [0.2, 1]
         return ratio_by_scale
 
     def load_state_dict(self, dict, **kwargs):  # type: ignore
@@ -536,7 +559,11 @@ class SplatfactoModel(Model):
             # scale up points to alleviate aliasing problem
             if self.step > self.config.stop_split_at and self.step % self.config.scaleup_interval == 0 and self.config.scaleup_point_post_densification:
             # if self.step >= 0 and self.config.scaleup_point_post_densification and self.step % self.config.scaleup_interval == 0:
-                self.scaleup_points(scaleup_factor=self.config.scaleup_factor, byscale=self.config.scaleup_by_scale)
+                self.scaleup_points(
+                    scaleup_factor=self.config.scaleup_factor, 
+                    byscale=self.config.scaleup_by_scale,
+                    annealing=self.config.scaleup_annealing,
+                )
                 print(f"dilation step forward in iter {self.step}")
 
             if deleted_mask is not None:
