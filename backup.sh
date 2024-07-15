@@ -25,7 +25,8 @@ for dilation_factor in ${dilation_factors[@]}; do
             --pipeline.model.num-downscales 0 \
             --vis wandb \
             --pipeline.model.background-color black \
-            --save-only-latest-checkpoint True \
+            --steps-per-save 2000 \
+            --save-only-latest-checkpoint False \
             --project-name mip_recon \
             --output-dir ${exp_dir}/dila_${dilation_factor} \
             --experiment-name ${scene} \
@@ -68,7 +69,8 @@ for dilation_factor in ${dilation_factors[@]}; do
             --pipeline.model.num-downscales 0 \
             --vis wandb \
             --pipeline.model.background-color black \
-            --save-only-latest-checkpoint True \
+            --steps-per-save 2000 \
+            --save-only-latest-checkpoint False \
             --project-name mip_recon \
             --output-dir ${exp_dir}/dila_${dilation_factor} \
             --experiment-name ${scene} \
@@ -112,7 +114,8 @@ for dilation_factor in ${dilation_factors[@]}; do
             --pipeline.model.num-downscales 0 \
             --vis wandb \
             --pipeline.model.background-color black \
-            --save-only-latest-checkpoint True \
+            --steps-per-save 2000 \
+            --save-only-latest-checkpoint False \
             --project-name mip_recon \
             --output-dir ${exp_dir}/dila_${dilation_factor} \
             --experiment-name ${scene} \
