@@ -46,7 +46,7 @@ def process_folder(pred_dir, gt_dir, factor):
     return metric_values.mean(dim=0)
 
 
-base_dir = '/home/space/exps/ns_dila_exps/dila_fixop'
+base_dir = '/home/space/exps/ns_dila_exps/dila_fixop_annealing_bygrad'
 dataset_dir = '/home/luzhan/Datasets/nerf_360_v2'
 factors = [1, 2, 4, 8]
 
@@ -60,7 +60,7 @@ exp_dirs = sorted(exp_dirs, key=lambda x: float(x.split('_')[-1]))
 
 scenes = ["bicycle", "flowers", "garden", "stump", "treehill", "room", "counter", "kitchen", "bonsai"]
 
-fp = open('eval/collected_metrics.csv', 'w+')
+fp = open('eval/collected_metrics_g.csv', 'w+')
 fp.write('Method,' + ','.join([s for s in scenes for _ in range(4)]) + '\n')
 fp.write('Res,' + ','.join([x for _ in scenes for x in ['1', '1/2', '1/4', '1/8']]) + '\n')
 

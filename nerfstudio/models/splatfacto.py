@@ -193,6 +193,8 @@ class SplatfactoModelConfig(ModelConfig):
     scaleup_interval: float = 1000
     scaleup_th_mode: Literal["top97", "mean"] = "top97"
     scaleup_annealing: bool = False
+    scaleup_by_grad: bool = False
+    scaleup_grad_thresh: float = 0.
 
 class SplatfactoModel(Model):
     """Nerfstudio's implementation of Gaussian Splatting
@@ -218,6 +220,7 @@ class SplatfactoModel(Model):
         else:
             means = torch.nn.Parameter((torch.rand((self.config.num_random, 3)) - 0.5) * self.config.random_scale)
         self.xys_grad_norm = None
+        self.scales_grad = None
         self.max_2Dsize = None
         distances, _ = self.k_nearest_sklearn(means.data, 3)
         distances = torch.from_numpy(distances)
@@ -323,7 +326,7 @@ class SplatfactoModel(Model):
     def opacities(self):
         return self.gauss_params["opacities"]
     
-    def scaleup_points(self, scaleup_factor=0.1, byscale=True, annealing=False):
+    def scaleup_points(self, scaleup_factor=0.1, byscale=True, annealing=False, mask_to_scaleup=None):
         current_scale = torch.exp(self.gauss_params["scales"].data)
 
         if annealing:
@@ -337,7 +340,11 @@ class SplatfactoModel(Model):
             )
             scale_factor = scaleup_factor * ratio_by_scale + 1
         else:
-            scale_factor = torch.tensor(scaleup_factor + 1)
+            scale_factor = torch.tensor(scaleup_factor + 1).repeat(current_scale.shape[0])
+        
+        if mask_to_scaleup is not None:
+            # let these too big points to be same
+            scale_factor[~mask_to_scaleup] = 1.
 
         # y = log(a * b) = log a + log b 
         # self.gauss_params["scales"].data = torch.log(torch.exp(self.gauss_params["scales"].data) * scale_factor)
@@ -460,7 +467,18 @@ class SplatfactoModel(Model):
         assert step == self.step
         # to save some training time, we no longer need to update those stats post refinement
         if self.step >= self.config.stop_split_at:
-            return
+            # log scale grad for scaleup operation
+            if self.config.scaleup_by_grad:
+                with torch.no_grad():
+                    # TODO: keep track of a scaling average of grad norms
+                    visible_mask = (self.radii > 0).flatten()
+                    grads = self.scales.grad[visible_mask]  # (n, 3)
+
+                    if self.scales_grad is None:
+                        self.scales_grad = torch.zeros((self.num_points, 3), device=self.device, dtype=torch.float32)
+                    self.scales_grad[visible_mask] += grads
+            else:
+                return
         with torch.no_grad():
             # keep track of a moving average of grad norms
             visible_mask = (self.radii > 0).flatten()
@@ -558,11 +576,19 @@ class SplatfactoModel(Model):
 
             # scale up points to alleviate aliasing problem
             if self.step > self.config.stop_split_at and self.step % self.config.scaleup_interval == 0 and self.config.scaleup_point_post_densification:
-            # if self.step >= 0 and self.config.scaleup_point_post_densification and self.step % self.config.scaleup_interval == 0:
+                # compute which to scaleup -- whose acc grad is small or negative.
+                if self.config.scaleup_by_grad:
+                    assert self.scales_grad is not None
+                    mask_to_scaleup = (self.scales_grad <= self.config.scaleup_grad_thresh).squeeze()
+                    print(f"dilation num: {mask_to_scaleup.sum()} / {mask_to_scaleup.shape[0]}")
+                else:
+                    mask_to_scaleup = None
+
                 self.scaleup_points(
                     scaleup_factor=self.config.scaleup_factor, 
                     byscale=self.config.scaleup_by_scale,
                     annealing=self.config.scaleup_annealing,
+                    mask_to_scaleup=mask_to_scaleup,
                 )
                 print(f"dilation step forward in iter {self.step}")
 
@@ -586,6 +612,8 @@ class SplatfactoModel(Model):
             self.xys_grad_norm = None
             self.vis_counts = None
             self.max_2Dsize = None
+
+            self.scales_grad = None
 
     def cull_gaussians(self, extra_cull_mask: Optional[torch.Tensor] = None):
         """
