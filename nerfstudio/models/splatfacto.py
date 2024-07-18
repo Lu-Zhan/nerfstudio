@@ -350,10 +350,10 @@ class SplatfactoModel(Model):
         # self.gauss_params["scales"].data = torch.log(torch.exp(self.gauss_params["scales"].data) * scale_factor)
         self.gauss_params["scales"].data = self.gauss_params["scales"].data + torch.log(scale_factor)
 
-        ratio_op = 1 / (scale_factor[:, 0] * scale_factor[:, 1] * scale_factor[:, 2])
-        self.gauss_params["opacities"].data = self.inverse_sigmoid(
-            torch.sigmoid(self.gauss_params["opacities"].data) * ratio_op[:, None]
-        )
+        # ratio_op = 1 / (scale_factor[:, 0] * scale_factor[:, 1] * scale_factor[:, 2])
+        # self.gauss_params["opacities"].data = self.inverse_sigmoid(
+        #     torch.sigmoid(self.gauss_params["opacities"].data) * ratio_op[:, None]
+        # )
     
     def inverse_sigmoid(self, x):
         return torch.log(x / (1 - x))
