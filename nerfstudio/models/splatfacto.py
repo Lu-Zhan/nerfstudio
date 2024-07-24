@@ -621,6 +621,11 @@ class SplatfactoModel(Model):
                 newradii / float(max(self.last_size[0], self.last_size[1])),
             )
 
+            # log 3D frequency each 1000 iters
+            if (self.step % 1000 == 1 and self.step < 1000) or (self.step % 1000 == 0 and self.step >= 1000):
+                self.log_3D_frequency(f"3D_frequency/{self.step}.png")
+                self.log_3D_frequency_progress(f"3D_frequency_progress/{self.step}.png")
+
     def set_crop(self, crop_box: Optional[OrientedBox]):
         self.crop_box = crop_box
 
