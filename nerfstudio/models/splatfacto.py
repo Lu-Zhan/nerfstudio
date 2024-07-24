@@ -395,11 +395,13 @@ class SplatfactoModel(Model):
             std_x_std = std_x.std()
 
             # x = np.linspace(0, std_x_mean + 3 * std_x_std, 1000)
-            x = np.linspace(0, 1500, 1000)
+            x = np.linspace(0, 2000, 1000)
 
             y = 0
             for op, std in zip(opacity, std_x):
                 y += op * stats.norm.pdf(x, 0, std)
+
+            y = np.log(y)
 
             self.freq_stat[self.step][labels[c]] = {
                 'x': x,
@@ -410,8 +412,8 @@ class SplatfactoModel(Model):
             ax[c].plot(x, y)
 
             # Add title and labels
-            ax[c].set_title(labels[c])
-            ax[c].set_xlabel('w')
+            # ax[c].set_title(labels[c])
+            ax[c].set_ylabel(labels[c])
 
             # # Add a legend
             # ax[c].legend()
@@ -428,6 +430,9 @@ class SplatfactoModel(Model):
         im = Image.fromarray(image)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         im.save(save_path)
+
+        # save x y into npz
+        np.savez(save_path.replace('.png', '.npz'), x=x, y=np.exp(y))
     
     def log_3D_frequency_progress(self, save_path):
         from matplotlib import colormaps
@@ -436,20 +441,28 @@ class SplatfactoModel(Model):
         # all_num = 30
         cmap = colormaps['jet'].resampled(all_num)
 
-        fig, ax = plt.subplots(3, 1)
+        fig, ax = plt.subplots(1, 1)
         
         for i, step in enumerate(self.freq_stat.keys()):
-            for j, c in enumerate(['x', 'y', 'z']):
+            # for j, c in enumerate(['x', 'y', 'z']):
+            for j, c in enumerate(['x']):
                 xy_info = self.freq_stat[step][c]
                 x = xy_info['x']
                 y = xy_info['y']
 
+                # # Create the figure and axis
+                # ax[j].plot(x, y, color=cmap(i / all_num), alpha=0.2, label=f'{step}')
+
+                # # Add title and labels
+                # ax[j].set_ylabel(c)
+                # ax[j].legend()
+
                 # Create the figure and axis
-                ax[j].plot(x, y, color=cmap(i / all_num), alpha=0.2, label=f'{step}')
+                ax.plot(x, y, color=cmap(i / all_num), alpha=0.2, label=f'{step}')
 
                 # Add title and labels
-                ax[j].set_ylabel(c)
-                ax[j].legend()
+                ax.set_ylabel(f'{c}(ln(value))')
+                ax.legend()
         
         # Draw the canvas
         canvas = FigureCanvas(fig)
@@ -994,12 +1007,6 @@ class SplatfactoModel(Model):
 
         if background.shape[0] == 3 and not self.training:
             background = background.expand(H, W, 3)
-
-        # log 3D frequency each 1000 iters
-        if self.step % 1000 == 1:
-            self.log_3D_frequency(f"3D_frequency/{self.step}.png")
-            self.log_3D_frequency_progress(f"3D_frequency_progress/{self.step}.png")
-
 
         return {
             "rgb": rgb.squeeze(0),  # type: ignore
