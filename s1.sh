@@ -9,7 +9,7 @@ exp_dir=/home/space/exps/ns_dila_exps/dila_bygrad
 
 # dilation_factors=(0.001 0.01 0.02 0.03)
 
-dilation_factors=(0.01 0.02 0.03 0.05 0.08 0.1)
+dilation_factors=(0.2)
 
 for dilation_factor in ${dilation_factors[@]}; do
     for scene in ${scenes[@]}; do

@@ -194,3 +194,4 @@ camera_paths/
 
 *.csv
 wandb/
+*.png

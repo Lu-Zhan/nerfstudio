@@ -214,6 +214,9 @@ class SplatfactoModel(Model):
         self.seed_points = seed_points
         super().__init__(*args, **kwargs)
 
+        from collections import OrderedDict
+        self.freq_stat = OrderedDict()
+
     def populate_modules(self):
         if self.seed_points is not None and not self.config.random_init:
             means = torch.nn.Parameter(self.seed_points[0])  # (Location, Color)
@@ -355,6 +358,85 @@ class SplatfactoModel(Model):
         #     torch.sigmoid(self.gauss_params["opacities"].data) * ratio_op[:, None]
         # )
     
+    @torch.no_grad()
+    def log_3D_frequency(self, save_path):
+        import scipy.stats as stats
+        import matplotlib.pyplot as plt
+
+        from PIL import Image
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
+        scales = torch.exp(self.scales)
+        scales_freq = 1 / scales    # (n, 3)
+
+        opacity = torch.sigmoid(self.opacities)[:, 0]
+
+        mask = opacity > 0.1
+        scales_freq = scales_freq[mask]
+        opacity = opacity[mask].cpu().numpy()
+
+        # draw the frequency of the 3D points into 3 views, x, y, z axis
+        # Gaussian function in frequency domain with mean = 0, std = scales_freq
+        fig, ax = plt.subplots(3, 1)
+        labels = ['x', 'y', 'z']
+
+        self.freq_stat[self.step] = {
+            'x': {},
+            'y': {},
+            'z': {}
+        }
+
+        # breakpoint()
+        
+        for c in range(3):
+            std_x = scales_freq[:, c].cpu().numpy()
+
+            std_x_mean = std_x.mean()
+            std_x_std = std_x.std()
+
+            # x = np.linspace(0, std_x_mean + 3 * std_x_std, 1000)
+            x = np.linspace(0, 4000, 1000)
+
+            y = 0
+            for op, std in zip(opacity, std_x):
+                y += op * stats.norm.pdf(x, 0, std)
+
+            self.freq_stat[self.step][labels[c]] = {
+                'x': x,
+                'y': y
+            }
+
+            # Create the figure and axis
+            ax[c].plot(x, y)
+
+            # Add title and labels
+            ax[c].set_title(labels[c])
+            ax[c].set_xlabel('w')
+
+            # # Add a legend
+            # ax[c].legend()
+
+        # Draw the canvas
+        canvas = FigureCanvas(fig)
+        canvas.draw()
+
+        # Convert the canvas to a NumPy array
+        width, height = fig.get_size_inches() * fig.get_dpi()
+        image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
+
+        # Save the NumPy array to an image file
+        im = Image.fromarray(image)
+        im.save(save_path)
+    
+    # def log_3D_frequency_progress(self, save_path):
+
+    #     for step in self.freq_stat.keys():
+    #         for c in ['x', 'y', 'z']:
+    #             xy_info = self.freq_stat[step][c]
+    #             x = xy_info['x']
+    #             y = xy_info['y']
+
+
     def inverse_sigmoid(self, x):
         return torch.log(x / (1 - x))
 
@@ -885,6 +967,11 @@ class SplatfactoModel(Model):
 
         if background.shape[0] == 3 and not self.training:
             background = background.expand(H, W, 3)
+
+        # log 3D frequency each 1000 iters
+        if self.step % 1000 == 1:
+            self.log_3D_frequency(f"3D_frequency_{self.step}.png")
+
 
         return {
             "rgb": rgb.squeeze(0),  # type: ignore

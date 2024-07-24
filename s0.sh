@@ -6,10 +6,10 @@ downscale_factors=(1 2 4 8)
 
 # scenes=("bicycle" "bonsai" "counter" "flowers" "garden" "stump" "treehill" "kitchen" "room")
 scenes=("bicycle" "bonsai" "counter" "flowers" "garden")
-exp_dir=/home/space/exps/ns_dila_exps/dila_bygrad
+exp_dir=/home/space/exps/ns_dila_exps/freq_eval
 # dilation_factors=( 0.05 0.08 0.1 0.2)
 
-dilation_factors=(0.01 0.02 0.03 0.05 0.08 0.1)
+dilation_factors=(0)
 
 for dilation_factor in ${dilation_factors[@]}; do
     for scene in ${scenes[@]}; do
