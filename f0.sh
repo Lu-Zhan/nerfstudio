@@ -1,8 +1,8 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 data_dir=/home/luzhan/Datasets/nerf_360_v2
 scenes=("bicycle")
-exp_dir=/home/space/exps/ns_dila_exps/freq_viewer
+exp_dir=/home/space/exps/ns_dila_exps/freq_viewer_progress
 dilation_factors=(0)
 
 for dilation_factor in ${dilation_factors[@]}; do
